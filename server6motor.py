@@ -1,7 +1,10 @@
+import asyncio
+import websockets
+import serial
 """This is a template code to be completed when we set up the servos completely"""
 
 import numpy as np
-
+def_angle = 90
 
 LENGTH = 400
 WIDTH = 300
@@ -30,7 +33,7 @@ class Rover():
         self.wheels = wheels
 
         self.max_turn_angle = max_turn_angle
-        self.angle = 0
+        self.angle = def_angle
 
     
     def turn(self, a):
@@ -43,7 +46,7 @@ class Rover():
             self.angle = (self.angle / abs(self.angle)) * self.max_turn_angle
 
         # check which way the rover is turning
-        if  self.angle > 0:
+        if  self.angle > def_angle:
             # if turning to the left
             self.wheels[0].angle = self.angle
             r1 = get_radius(self.wheels[0].angle)  # Inner radius
@@ -57,7 +60,7 @@ class Rover():
             # Rear wheels (steering in opposite direction for sharper turn)
             self.wheels[2].angle = -self.wheels[0].angle  # Rear left wheel
             self.wheels[5].angle = -self.wheels[3].angle  # Rear right wheel
-        elif self.angle < 0:
+        elif self.angle < def_angle:
             # if turning to the right
             self.wheels[3].angle = self.angle
             r1 = get_radius(self.wheels[3].angle)  # Inner radius
@@ -71,3 +74,44 @@ class Rover():
             # Rear wheels (steering in opposite direction for sharper turn)
             self.wheels[2].angle = -self.wheels[0].angle  # Rear left wheel
             self.wheels[5].angle = -self.wheels[3].angle  # Rear right wheel
+
+# Constants
+PORT = 8765
+
+# Serial connection to the Arduino Nano
+serial = serial.Serial("/dev/ttyACM0", 9600, timeout=1)
+
+async def connect(websocket):
+    print("[*] Connection Established!")
+    
+    # Listen for commands
+    while True:
+        try:
+            # Wait for a command
+            command = await websocket.recv(4)
+            print(f"[*] Recieved: {command}")
+
+            # Do something about the recieved command her
+            
+            if command[1] == "1":
+                serial.write(b'\xff\xff\xff\xff\xff\xff')
+            elif command[2] == "1":
+                serial.write(b'\x00\x00\x00\x00\x00\x00')
+            else:
+                serial.write(b"\x7f\x7f\x7f\x7f\x7f\x7f")
+
+        except websockets.exceptions.ConnectionClosed as e:
+            print(f"[*] Connection Closed: {e}")
+            break
+
+
+async def main():
+    async with websockets.serve(connect, "0.0.0.0", PORT):
+        print(f"[*] Server Started on Port {PORT}")
+        await asyncio.Future() # run forever
+
+
+# Start the Server
+if __name__ == "__main__":
+    asyncio.run(main())
+
