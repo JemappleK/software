@@ -17,10 +17,9 @@ async def connect(websocket):
         try:
             # Wait for a command
             command = await websocket.recv()
-            print(f"[*] Recieved: {command}")
+            print(f"[*] Received: {command}")
 
             # Do something about the recieved command here
-            # Example sending 1 or 0 to arduino which turns an led on/off
             if command == "1":
                 serial.write(b'1')
             elif command == "0":
